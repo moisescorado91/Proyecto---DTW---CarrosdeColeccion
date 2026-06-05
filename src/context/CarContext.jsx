@@ -84,6 +84,83 @@ function carReducer(state, action) {
   }
 }
 
+// Proveedor principal del contexto. Carga datos persistidos, guarda cambios y expone acciones CRUD.
+export function CarProvider({ children }) {
+  const [state, dispatch] = useReducer(carReducer, initialState);
+
+  // Carga la coleccion desde localStorage cuando la aplicacion se monta por primera vez.
+  useEffect(() => {
+    try {
+      const cars = loadCars();
+      dispatch({ type: 'SET_CARS', payload: cars });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+    }
+  }, []);
+
+  // Persiste los automoviles y recalcula metricas cada vez que cambia la coleccion.
+  useEffect(() => {
+    if (!state.loading) {
+      saveCars(state.cars);
+      updateMetrics(state.cars);
+    }
+  }, [state.cars, state.loading]);
+
+  const updateMetrics = useCallback(async (cars) => {
+    try {
+      const metrics = await computeMetrics(cars);
+      dispatch({ type: 'SET_METRICS', payload: metrics });
+    } catch (error) {
+      console.error('Error computing metrics:', error);
+    }
+  }, []);
+
+  // Registra un nuevo automovil y notifica al usuario la operacion realizada.
+  const addCar = useCallback((car) => {
+    dispatch({ type: 'ADD_CAR', payload: car });
+      dispatch({ type: 'SHOW_TOAST', payload: { message: 'Automóvil registrado exitosamente', variant: 'success' } });
+  }, []);
+
+  // Actualiza un automovil existente manteniendo su identificador.
+  const updateCar = useCallback((car) => {
+    dispatch({ type: 'UPDATE_CAR', payload: car });
+    dispatch({ type: 'SHOW_TOAST', payload: { message: 'Automóvil actualizado exitosamente', variant: 'success' } });
+  }, []);
+
+  // Elimina un automovil por id y cierra el modal de confirmacion.
+  const deleteCar = useCallback((id) => {
+    dispatch({ type: 'DELETE_CAR', payload: id });
+    dispatch({ type: 'SHOW_TOAST', payload: { message: 'Automóvil eliminado correctamente', variant: 'success' } });
+    dispatch({ type: 'TOGGLE_DELETE' });
+  }, []);
+
+  // Muestra mensajes temporales para informar resultados o advertencias.
+  const showToast = useCallback((message, variant = 'primary') => {
+    dispatch({ type: 'SHOW_TOAST', payload: { message, variant } });
+  }, []);
+
+  // Limpia la notificacion activa.
+  const hideToast = useCallback(() => {
+    dispatch({ type: 'HIDE_TOAST' });
+  }, []);
+
+  const value = {
+    state,
+    dispatch,
+    addCar,
+    updateCar,
+    deleteCar,
+    showToast,
+    hideToast
+  };
+
+  return (
+    <CarContext.Provider value={value}>
+      {children}
+    </CarContext.Provider>
+  );
+}
+
 // Hook de acceso seguro al contexto. Evita usar el estado fuera del proveedor correspondiente.
 export function useCarContext() {
   const context = useContext(CarContext);
