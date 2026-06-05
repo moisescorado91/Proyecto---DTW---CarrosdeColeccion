@@ -49,3 +49,20 @@ export async function fetchCountries() {
     return [];
   }
 }
+
+// Consulta tasas de cambio con base USD para mostrar conversiones del valor total.
+export async function fetchExchangeRates() {
+  try {
+    const response = await fetch('https://open.er-api.com/v6/latest/USD');
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const data = await response.json();
+    if (data.result !== 'success') throw new Error('La API de tasas no devolvió éxito');
+    return {
+      rates: data.rates,
+      base: data.base_code || 'USD'
+    };
+  } catch (error) {
+    console.warn('No se pudieron cargar tasas de cambio:', error);
+    throw error;
+  }
+}
