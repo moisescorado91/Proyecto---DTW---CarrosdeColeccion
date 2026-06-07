@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCarContext } from '../context/CarContext';
+import { processImage } from '../services/imageUtils';
+import { fetchCarMakes, fetchCountries } from '../services/api';
 
 // Estructura inicial del formulario
 const initialState = {
@@ -19,9 +21,11 @@ function CarForm() {
   const { showForm, selectedCar } = state;
   const [form, setForm] = useState(initialState);
   const [validated, setValidated] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [marcas, setMarcas] = useState([]);
   const [paises, setPaises] = useState([]);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadSuggestions();
@@ -40,41 +44,103 @@ function CarForm() {
       console.error('Error cargando sugerencias:', error);
     }
   };
-  
+
+  useEffect(() => {
+    if (showForm) {
+      if (selectedCar) {
+        // en caso que presionen editar se carga la informacion del elemento seleccionado
+        setForm({
+          marca: selectedCar.marca || '',
+          modelo: selectedCar.modelo || '',
+          anio: selectedCar.anio?.toString() || '',
+          estado: selectedCar.estado || '',
+          pais: selectedCar.pais || '',
+          valor: selectedCar.valor?.toString() || '',
+          descripcion: selectedCar.descripcion || '',
+          imagen: selectedCar.imagen || null
+        });
+        setImagePreview(selectedCar.imagen || null);
+      } else {
+        // en caso que sea nuevo restablecemos el formulario
+        setForm(initialState);
+        setImagePreview(null);
+      }
+      setValidated(false);
+      setIsVisible(true);
+      document.body.classList.add('modal-open');
+    } else {
+      // Al cerrar el modal se retiran los estilos temporales del documento.
+      setIsVisible(false);
+      document.body.classList.remove('modal-open');
+    }
+  }, [showForm, selectedCar]);
+
+  // se limpia clases del body si el componente se desmonta con el modal abierto.
+  useEffect(() => {
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, []);
+
   // se actualiza el campo modificado cada vez que se escribe
   const handleChange = (e) => {
     const { id, value } = e.target;
     setForm(prev => ({ ...prev, [id]: value }));
   };
 
+  // Procesa la imagen seleccionada, genera una vista previa y guarda el resultado optimizado.
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const processedImage = await processImage(file);
+      setImagePreview(processedImage);
+      setForm(prev => ({ ...prev, imagen: processedImage }));
+      showToast('Imagen cargada y optimizada', 'success');
+    } catch (error) {
+      showToast(error.message, 'danger');
+    }
+  };
+
+  // Permite quitar la imagen cargada y limpiar el input de archivo.
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setForm(prev => ({ ...prev, imagen: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // validamos las entradas del formulario
   const validateForm = () => {
     const errors = {};
-
+    
     if (!form.marca.trim()) errors.marca = 'Ingresa una marca válida.';
     if (!form.modelo.trim()) errors.modelo = 'Ingresa un modelo.';
-
+    
     const anio = parseInt(form.anio);
     if (!form.anio || isNaN(anio) || anio < 1886 || anio > 2030) {
       errors.anio = 'Año entre 1886 y 2030.';
     }
-
+    
     if (!form.estado) errors.estado = 'Selecciona un estado.';
     if (!form.pais.trim()) errors.pais = 'Ingresa el país o ubicación.';
-
+    
     const valor = parseFloat(form.valor);
-
+  
     // validamos la entrada del valor del carro
     if (!form.valor || isNaN(valor) || valor <= 0) {
       errors.valor = 'Ingresa un valor mayor a 0.';
     }
-
+    
     return errors;
   };
+
   // evento para enviar el formulario
   const handleSubmit = (e) => {
     e.preventDefault(); // para que no se recargue la pagina
-
+    
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setValidated(true);
@@ -105,20 +171,19 @@ function CarForm() {
         addCar(carData);
         showToast('Automóvil registrado exitosamente', 'success');
       }
-
-      // cerramos el modal despues de hacer la operacion
+      
+     // cerramos el modal despues de hacer la operacion
       handleClose();
     } catch (error) {
       showToast('Error al guardar: ' + error.message, 'danger');
     }
-
   };
 
   // funcion que se encarga de cerrar el modal del formulario
   const handleClose = () => {
     setIsVisible(false);
     document.body.classList.remove('modal-open');
-
+    
     setTimeout(() => {
       dispatch({ type: 'TOGGLE_FORM', payload: null });
     }, 300);
@@ -128,14 +193,14 @@ function CarForm() {
 
   return (
     <>
-      <div
-        className={`modal-backdrop fade ${isVisible ? 'show' : ''}`}
+      <div 
+        className={`modal-backdrop fade ${isVisible ? 'show' : ''}`} 
         style={{ display: isVisible ? 'block' : 'none' }}
         onClick={handleClose}
       />
-
-      <div
-        className={`modal fade ${isVisible ? 'show' : ''}`}
+      
+      <div 
+        className={`modal fade ${isVisible ? 'show' : ''}`} 
         style={{ display: isVisible ? 'block' : 'none' }}
         tabIndex="-1"
         role="dialog"
@@ -149,14 +214,14 @@ function CarForm() {
               <h5 className="modal-title">
                 {selectedCar ? 'Editar automóvil' : 'Nuevo automóvil'}
               </h5>
-              <button
-                type="button"
-                className="btn-close"
+              <button 
+                type="button" 
+                className="btn-close" 
                 aria-label="Cerrar"
                 onClick={handleClose}
               />
             </div>
-
+            
             <form onSubmit={handleSubmit} noValidate className={validated ? 'was-validated' : ''}>
               <div className="modal-body">
                 <div className="row g-3">
@@ -165,13 +230,13 @@ function CarForm() {
                     <label className="form-label" htmlFor="marca">
                       Marca *
                     </label>
-                    <input
-                      className="form-control"
-                      id="marca"
+                    <input 
+                      className="form-control" 
+                      id="marca" 
                       value={form.marca}
                       onChange={handleChange}
-                      required
-                      maxLength="40"
+                      required 
+                      maxLength="40" 
                       autoComplete="off"
                       list="marcas-list"
                       placeholder="Ej: Toyota, Ford, BMW..."
@@ -184,17 +249,17 @@ function CarForm() {
                     <div className="invalid-feedback">Ingresa una marca válida.</div>
                   </div>
 
-
+  
                   <div className="col-md-6">
                     <label className="form-label" htmlFor="modelo">
                       Modelo *
                     </label>
-                    <input
-                      className="form-control"
-                      id="modelo"
+                    <input 
+                      className="form-control" 
+                      id="modelo" 
                       value={form.modelo}
                       onChange={handleChange}
-                      required
+                      required 
                       maxLength="40"
                       placeholder="Ej: Corolla, Mustang..."
                     />
@@ -205,15 +270,15 @@ function CarForm() {
                     <label className="form-label" htmlFor="anio">
                       Año *
                     </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      id="anio"
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      id="anio" 
                       value={form.anio}
                       onChange={handleChange}
-                      min="1886"
-                      max="2030"
-                      required
+                      min="1886" 
+                      max="2030" 
+                      required 
                       placeholder="Ej: 2020"
                     />
                     <div className="invalid-feedback">Año entre 1886 y 2030.</div>
@@ -222,9 +287,9 @@ function CarForm() {
                     <label className="form-label" htmlFor="estado">
                       Estado *
                     </label>
-                    <select
-                      className="form-select"
-                      id="estado"
+                    <select 
+                      className="form-select" 
+                      id="estado" 
                       value={form.estado}
                       onChange={handleChange}
                       required
@@ -244,15 +309,15 @@ function CarForm() {
                     <label className="form-label" htmlFor="valor">
                       Valor estimado (USD) *
                     </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      id="valor"
+                    <input 
+                      type="number" 
+                      className="form-control" 
+                      id="valor" 
                       value={form.valor}
                       onChange={handleChange}
-                      min="1"
-                      step="100"
-                      required
+                      min="1" 
+                      step="100" 
+                      required 
                       placeholder="Ej: 50000"
                     />
                     <div className="invalid-feedback">Ingresa un valor mayor a 0.</div>
@@ -263,13 +328,13 @@ function CarForm() {
                     <label className="form-label" htmlFor="pais">
                       País / ubicación *
                     </label>
-                    <input
-                      className="form-control"
-                      id="pais"
+                    <input 
+                      className="form-control" 
+                      id="pais" 
                       value={form.pais}
                       onChange={handleChange}
-                      required
-                      maxLength="60"
+                      required 
+                      maxLength="60" 
                       autoComplete="off"
                       list="paises-list"
                       placeholder="Ej: España, México, Argentina..."
@@ -283,8 +348,8 @@ function CarForm() {
                     {form.pais && paises.length > 0 && (
                       <div className="form-text">
                         <i className="bi bi-check-circle text-success"></i>{' '}
-                        {paises.includes(form.pais)
-                          ? 'País reconocido'
+                        {paises.includes(form.pais) 
+                          ? 'País reconocido' 
                           : 'País personalizado (no está en la lista)'}
                       </div>
                     )}
@@ -293,26 +358,60 @@ function CarForm() {
                     <label className="form-label" htmlFor="descripcion">
                       Descripción
                     </label>
-                    <textarea
-                      className="form-control"
-                      id="descripcion"
+                    <textarea 
+                      className="form-control" 
+                      id="descripcion" 
                       value={form.descripcion}
                       onChange={handleChange}
-                      rows="3"
-                      maxLength="400"
+                      rows="3" 
+                      maxLength="400" 
                       placeholder="Detalles del vehículo, historia, motor, etc."
                     />
                     <div className="form-text">
                       {form.descripcion.length}/400 caracteres
                     </div>
                   </div>
+                  <div className="col-12">
+                    <label className="form-label" htmlFor="imagen">
+                      <i className="bi bi-image"></i> Imagen
+                      
+                    </label>
+                    <input 
+                      type="file" 
+                      className="form-control" 
+                      id="imagen" 
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleImageChange}
+                    />
+                    <div className="invalid-feedback">Selecciona una imagen válida (JPG, PNG, WEBP).</div>
+                    
+                    {/* vista previa de la imagen cuando de haya cargado */}
+                    {imagePreview && (
+                      <div className="mt-2 text-center">
+                        <img 
+                          src={imagePreview} 
+                          className="img-thumbnail" 
+                          alt="Vista previa" 
+                          style={{ maxHeight: '200px' }}
+                        />
+                        <button 
+                          type="button" 
+                          className="btn btn-sm btn-outline-danger mt-2"
+                          onClick={handleRemoveImage}
+                        >
+                          <i className="bi bi-x-circle"></i> Quitar imagen
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
+              
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
                   onClick={handleClose}
                 >
                   Cancelar
