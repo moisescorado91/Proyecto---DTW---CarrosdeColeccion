@@ -23,7 +23,24 @@ function CarForm() {
   const [marcas, setMarcas] = useState([]);
   const [paises, setPaises] = useState([]);
 
+  useEffect(() => {
+    loadSuggestions();
+  }, []);
 
+  // Obtiene sugerencias desde APIs publicas en paralelo para reducir el tiempo de espera.
+  const loadSuggestions = async () => {
+    try {
+      const [marcasList, paisesList] = await Promise.all([
+        fetchCarMakes(),
+        fetchCountries()
+      ]);
+      setMarcas(marcasList);
+      setPaises(paisesList);
+    } catch (error) {
+      console.error('Error cargando sugerencias:', error);
+    }
+  };
+  
   // se actualiza el campo modificado cada vez que se escribe
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -159,7 +176,11 @@ function CarForm() {
                       list="marcas-list"
                       placeholder="Ej: Toyota, Ford, BMW..."
                     />
-
+                    <datalist id="marcas-list">
+                      {marcas.map((marca, index) => (
+                        <option key={index} value={marca} />
+                      ))}
+                    </datalist>
                     <div className="invalid-feedback">Ingresa una marca válida.</div>
                   </div>
 
@@ -253,9 +274,20 @@ function CarForm() {
                       list="paises-list"
                       placeholder="Ej: España, México, Argentina..."
                     />
-
+                    <datalist id="paises-list">
+                      {paises.map((pais, index) => (
+                        <option key={index} value={pais} />
+                      ))}
+                    </datalist>
                     <div className="invalid-feedback">Ingresa el país o ubicación.</div>
-
+                    {form.pais && paises.length > 0 && (
+                      <div className="form-text">
+                        <i className="bi bi-check-circle text-success"></i>{' '}
+                        {paises.includes(form.pais)
+                          ? 'País reconocido'
+                          : 'País personalizado (no está en la lista)'}
+                      </div>
+                    )}
                   </div>
                   <div className="col-12">
                     <label className="form-label" htmlFor="descripcion">
