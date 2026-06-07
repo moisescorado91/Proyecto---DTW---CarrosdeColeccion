@@ -30,17 +30,78 @@ function CarForm() {
     setForm(prev => ({ ...prev, [id]: value }));
   };
 
+  // validamos las entradas del formulario
+  const validateForm = () => {
+    const errors = {};
+
+    if (!form.marca.trim()) errors.marca = 'Ingresa una marca válida.';
+    if (!form.modelo.trim()) errors.modelo = 'Ingresa un modelo.';
+
+    const anio = parseInt(form.anio);
+    if (!form.anio || isNaN(anio) || anio < 1886 || anio > 2030) {
+      errors.anio = 'Año entre 1886 y 2030.';
+    }
+
+    if (!form.estado) errors.estado = 'Selecciona un estado.';
+    if (!form.pais.trim()) errors.pais = 'Ingresa el país o ubicación.';
+
+    const valor = parseFloat(form.valor);
+
+    // validamos la entrada del valor del carro
+    if (!form.valor || isNaN(valor) || valor <= 0) {
+      errors.valor = 'Ingresa un valor mayor a 0.';
+    }
+
+    return errors;
+  };
   // evento para enviar el formulario
   const handleSubmit = (e) => {
     e.preventDefault(); // para que no se recargue la pagina
-    
+
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidated(true);
+      showToast('Revisa los campos resaltados en el formulario', 'warning');
+      return;
+    }
+
+    // creamos un objeto con la informacion del automovil
+    const carData = {
+      id: selectedCar?.id || crypto.randomUUID(),
+      marca: form.marca.trim(),
+      modelo: form.modelo.trim(),
+      anio: parseInt(form.anio),
+      estado: form.estado,
+      pais: form.pais.trim(),
+      valor: parseFloat(form.valor),
+      descripcion: form.descripcion.trim(),
+      imagen: form.imagen
+    };
+
+    // creamos bloques para capturar posibles excepciones
+    try {
+      // validamos la opcion a hacer si es actualizacion o creacion
+      if (selectedCar) {
+        updateCar(carData);
+        showToast('Automóvil actualizado exitosamente', 'success');
+      } else {
+        addCar(carData);
+        showToast('Automóvil registrado exitosamente', 'success');
+      }
+
+      // cerramos el modal despues de hacer la operacion
+      handleClose();
+    } catch (error) {
+      showToast('Error al guardar: ' + error.message, 'danger');
+    }
+
   };
 
   // funcion que se encarga de cerrar el modal del formulario
   const handleClose = () => {
     setIsVisible(false);
     document.body.classList.remove('modal-open');
-    
+
     setTimeout(() => {
       dispatch({ type: 'TOGGLE_FORM', payload: null });
     }, 300);
@@ -50,14 +111,14 @@ function CarForm() {
 
   return (
     <>
-      <div 
-        className={`modal-backdrop fade ${isVisible ? 'show' : ''}`} 
+      <div
+        className={`modal-backdrop fade ${isVisible ? 'show' : ''}`}
         style={{ display: isVisible ? 'block' : 'none' }}
         onClick={handleClose}
       />
-      
-      <div 
-        className={`modal fade ${isVisible ? 'show' : ''}`} 
+
+      <div
+        className={`modal fade ${isVisible ? 'show' : ''}`}
         style={{ display: isVisible ? 'block' : 'none' }}
         tabIndex="-1"
         role="dialog"
@@ -71,14 +132,14 @@ function CarForm() {
               <h5 className="modal-title">
                 {selectedCar ? 'Editar automóvil' : 'Nuevo automóvil'}
               </h5>
-              <button 
-                type="button" 
-                className="btn-close" 
+              <button
+                type="button"
+                className="btn-close"
                 aria-label="Cerrar"
                 onClick={handleClose}
               />
             </div>
-            
+
             <form onSubmit={handleSubmit} noValidate className={validated ? 'was-validated' : ''}>
               <div className="modal-body">
                 <div className="row g-3">
@@ -87,32 +148,32 @@ function CarForm() {
                     <label className="form-label" htmlFor="marca">
                       Marca *
                     </label>
-                    <input 
-                      className="form-control" 
-                      id="marca" 
+                    <input
+                      className="form-control"
+                      id="marca"
                       value={form.marca}
                       onChange={handleChange}
-                      required 
-                      maxLength="40" 
+                      required
+                      maxLength="40"
                       autoComplete="off"
                       list="marcas-list"
                       placeholder="Ej: Toyota, Ford, BMW..."
                     />
-                    
+
                     <div className="invalid-feedback">Ingresa una marca válida.</div>
                   </div>
 
-  
+
                   <div className="col-md-6">
                     <label className="form-label" htmlFor="modelo">
                       Modelo *
                     </label>
-                    <input 
-                      className="form-control" 
-                      id="modelo" 
+                    <input
+                      className="form-control"
+                      id="modelo"
                       value={form.modelo}
                       onChange={handleChange}
-                      required 
+                      required
                       maxLength="40"
                       placeholder="Ej: Corolla, Mustang..."
                     />
@@ -123,15 +184,15 @@ function CarForm() {
                     <label className="form-label" htmlFor="anio">
                       Año *
                     </label>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      id="anio" 
+                    <input
+                      type="number"
+                      className="form-control"
+                      id="anio"
                       value={form.anio}
                       onChange={handleChange}
-                      min="1886" 
-                      max="2030" 
-                      required 
+                      min="1886"
+                      max="2030"
+                      required
                       placeholder="Ej: 2020"
                     />
                     <div className="invalid-feedback">Año entre 1886 y 2030.</div>
@@ -140,9 +201,9 @@ function CarForm() {
                     <label className="form-label" htmlFor="estado">
                       Estado *
                     </label>
-                    <select 
-                      className="form-select" 
-                      id="estado" 
+                    <select
+                      className="form-select"
+                      id="estado"
                       value={form.estado}
                       onChange={handleChange}
                       required
@@ -162,15 +223,15 @@ function CarForm() {
                     <label className="form-label" htmlFor="valor">
                       Valor estimado (USD) *
                     </label>
-                    <input 
-                      type="number" 
-                      className="form-control" 
-                      id="valor" 
+                    <input
+                      type="number"
+                      className="form-control"
+                      id="valor"
                       value={form.valor}
                       onChange={handleChange}
-                      min="1" 
-                      step="100" 
-                      required 
+                      min="1"
+                      step="100"
+                      required
                       placeholder="Ej: 50000"
                     />
                     <div className="invalid-feedback">Ingresa un valor mayor a 0.</div>
@@ -181,32 +242,32 @@ function CarForm() {
                     <label className="form-label" htmlFor="pais">
                       País / ubicación *
                     </label>
-                    <input 
-                      className="form-control" 
-                      id="pais" 
+                    <input
+                      className="form-control"
+                      id="pais"
                       value={form.pais}
                       onChange={handleChange}
-                      required 
-                      maxLength="60" 
+                      required
+                      maxLength="60"
                       autoComplete="off"
                       list="paises-list"
                       placeholder="Ej: España, México, Argentina..."
                     />
-                  
+
                     <div className="invalid-feedback">Ingresa el país o ubicación.</div>
-                   
+
                   </div>
                   <div className="col-12">
                     <label className="form-label" htmlFor="descripcion">
                       Descripción
                     </label>
-                    <textarea 
-                      className="form-control" 
-                      id="descripcion" 
+                    <textarea
+                      className="form-control"
+                      id="descripcion"
                       value={form.descripcion}
                       onChange={handleChange}
-                      rows="3" 
-                      maxLength="400" 
+                      rows="3"
+                      maxLength="400"
                       placeholder="Detalles del vehículo, historia, motor, etc."
                     />
                     <div className="form-text">
@@ -215,11 +276,11 @@ function CarForm() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="modal-footer">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={handleClose}
                 >
                   Cancelar
