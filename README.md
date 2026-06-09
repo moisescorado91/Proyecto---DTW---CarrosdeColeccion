@@ -629,7 +629,7 @@ ESLint esta configurado en `eslint.config.js` con:
 
 ## Autor
 
-Proyecto desarrollado por los alumnos:
+Proyecto desarrollado por los alumnos del grupo 15:
 - Carlos Manuel Solis Flores SF10020
 - Moises Isaac Molina Corado MC23152
 - German Joel Pérez Aquino PA23060
