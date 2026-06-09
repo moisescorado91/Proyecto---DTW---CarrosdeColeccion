@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { useCarContext } from '../context/CarContext';
 import { fetchExchangeRates } from '../services/api';
-
+import { useTheme } from '../hooks/useTheme';
 // Panel de resumen de la coleccion.
 // Muestra metricas calculadas y equivalencias del valor total en distintas monedas.
 function Dashboard() {
   const { state, dispatch } = useCarContext();
   const { metrics, rates, ratesBase } = state;
+    const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Al montar el componente se solicitan tasas de cambio para mostrar conversiones.
@@ -95,7 +96,7 @@ function Dashboard() {
 
   return (
     <section className="mb-4">
-      <h2 className="mb-3"><i className="bi bi-speedometer2"></i> Dashboard</h2>
+      <h2 className="mb-3"> Dashboard</h2>
 
       {/* Tarjetas principales con indicadores generales de la coleccion. */}
       <div className="row g-3">
