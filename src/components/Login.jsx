@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCookie, setCookie } from '../services/auth';
+import { getUsers, setCookie, normalizeEmail } from '../services/auth';
 
 function Login() {
     const navigate = useNavigate();
@@ -19,10 +19,10 @@ function Login() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const users = getCookie('users') || [];
+        const users = getUsers();
 
         const user = users.find(
-            u => u.email === email && u.password === password
+            u => u.email === normalizeEmail(email) && u.password === password
         );
 
         if (!user) {

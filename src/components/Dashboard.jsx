@@ -1,13 +1,11 @@
 import React, { useEffect } from 'react';
 import { useCarContext } from '../context/CarContext';
 import { fetchExchangeRates } from '../services/api';
-import { useTheme } from '../hooks/useTheme';
 // Panel de resumen de la coleccion.
 // Muestra metricas calculadas y equivalencias del valor total en distintas monedas.
 function Dashboard() {
   const { state, dispatch } = useCarContext();
   const { metrics, rates, ratesBase } = state;
-    const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Al montar el componente se solicitan tasas de cambio para mostrar conversiones.

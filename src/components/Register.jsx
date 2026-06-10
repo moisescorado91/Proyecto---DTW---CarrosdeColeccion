@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCookie, setCookie } from '../services/auth';
+import { getUsers, saveUsers, normalizeEmail } from '../services/auth';
 
 
 function Register() {
@@ -22,10 +22,11 @@ function Register() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const users = getCookie('users') || [];
+        const users = getUsers();
+        const normalizedEmail = normalizeEmail(email);
 
         const exists = users.some(
-            user => user.email === email
+            user => user.email === normalizedEmail
         );
 
         if (exists) {
@@ -36,11 +37,11 @@ function Register() {
         users.push({
             id: Date.now(),
             name,
-            email,
+            email: normalizedEmail,
             password
         });
 
-        setCookie('users', users);
+        saveUsers(users);
 
         showToast('Usuario Registrado', 'success');
 
