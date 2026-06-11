@@ -94,28 +94,29 @@ function MapView() {
     setMapKey(prev => prev + 1);
   }, [cars]);
 
-  // Se usa la ruta proxy /api/restcountries para evitar el error de CORS causado por el
-  // redirect 301 que devuelve restcountries.com al hacer fetch directo desde el navegador.
+  // Usa CountriesNow API para obtener coordenadas de paises.
+  // Esta API tiene CORS habilitado correctamente y no genera errores de redirect
+  // como restcountries.com al estar desplegado en Netlify u otros hostings.
   const loadCountryCoordinates = async () => {
     try {
-      const response = await fetch('/api/restcountries?fields=name,latlng,translations');
+      const response = await fetch(
+        'https://countriesnow.space/api/v0.1/countries/positions'
+      );
       if (!response.ok) throw new Error('HTTP ' + response.status);
-      const data = await response.json();
-      
+      const json = await response.json();
+
+      // CountriesNow devuelve { error: false, data: [{ name, iso2, lat, long }] }
+      const data = json.data || [];
       const coords = {};
       data.forEach(country => {
-        const common = country.name?.common;
-        const spanish = country.translations?.spa?.common;
-        const latlng = country.latlng;
-        
-        if (!latlng || latlng.length < 2) return;
-        
-        // se registran nombres en ingles y espanol para mejorar coincidencias con el formulario.
-        [common, spanish].forEach(name => {
-          if (name) {
-            coords[name.toLowerCase()] = latlng;
-          }
-        });
+        const name = country.name;
+        const lat  = country.lat;
+        const lng  = country.long;
+
+        if (!name || lat == null || lng == null) return;
+
+        // se indexa por nombre en minusculas para coincidir con lo que escribe el usuario.
+        coords[name.toLowerCase()] = [lat, lng];
       });
       
       setCountryCoords(coords);

@@ -21,33 +21,27 @@ export async function fetchCarMakes() {
   }
 }
 
-// Obtiene nombres de paises en ingles y espanol para alimentar sugerencias del formulario.
-// Se usa la ruta proxy /api/restcountries en lugar de la URL directa para evitar errores
-// de CORS causados por el redirect 301 que devuelve restcountries.com en produccion.
+// Obtiene nombres de paises para alimentar sugerencias del formulario.
+// Usa CountriesNow API (countriesnow.space) que tiene CORS habilitado correctamente
+// y no genera errores de redirect como restcountries.com en produccion.
 export async function fetchCountries() {
   try {
     const response = await fetch(
-      '/api/restcountries?fields=name,translations'
+      'https://countriesnow.space/api/v0.1/countries/positions'
     );
     if (!response.ok) throw new Error('HTTP ' + response.status);
-    const data = await response.json();
+    const json = await response.json();
 
-    // Extrae nombres de paises en espanol e ingles.
-    const countryNames = new Set();
-    data.forEach(country => {
-      // Nombre comun en ingles.
-      if (country.name?.common) {
-        countryNames.add(country.name.common);
-      }
-      // Nombre en espanol si esta disponible.
-      if (country.translations?.spa?.common) {
-        countryNames.add(country.translations.spa.common);
-      }
-    });
+    // CountriesNow devuelve { error: false, data: [{ name, iso2, lat, long }] }
+    const data = json.data || [];
+    const countryNames = data
+      .map(c => c.name)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'es'));
 
-    return Array.from(countryNames).sort((a, b) => a.localeCompare(b, 'es'));
+    return countryNames;
   } catch (error) {
-    console.warn('No se pudieron cargar los países (RestCountries):', error);
+    console.warn('No se pudieron cargar los países (CountriesNow):', error);
     return [];
   }
 }
