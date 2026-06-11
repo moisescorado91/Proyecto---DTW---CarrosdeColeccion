@@ -1,0 +1,39 @@
+# ──────────────────────────────────────────────────────────
+# Configuracion de Netlify para Garaje de Coleccion (React + Vite)
+# ──────────────────────────────────────────────────────────
+
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+
+# ──────────────────────────────────────────────────────────
+# Proxy para REST Countries API
+#
+# El navegador no puede hacer fetch directo a restcountries.com
+# desde Netlify porque el servidor devuelve un redirect 301
+# sin headers CORS, lo que bloquea la respuesta.
+#
+# Solucion: Netlify actua como intermediario en el servidor.
+# El fetch sale de /api/restcountries (mismo origen, sin CORS)
+# y Netlify lo reenvía a restcountries.com de forma transparente.
+# ──────────────────────────────────────────────────────────
+[[redirects]]
+  from   = "/api/restcountries"
+  to     = "https://restcountries.com/v3.1/all"
+  status = 200
+  force  = true
+
+# ──────────────────────────────────────────────────────────
+# SPA Routing — React Router DOM
+#
+# Sin esta regla, refrescar /login o /register en Netlify
+# devuelve 404 porque Netlify busca un archivo fisico
+# en esa ruta y no lo encuentra.
+#
+# Esta regla debe ir SIEMPRE AL FINAL para no interceptar
+# rutas reales como los assets del build o el proxy de arriba.
+# ──────────────────────────────────────────────────────────
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

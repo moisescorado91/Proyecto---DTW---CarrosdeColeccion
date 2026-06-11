@@ -94,10 +94,11 @@ function MapView() {
     setMapKey(prev => prev + 1);
   }, [cars]);
 
-  // se hace consulta rest countries y construye un indice de coordenadas por nombre de pais.
+  // Se usa la ruta proxy /api/restcountries para evitar el error de CORS causado por el
+  // redirect 301 que devuelve restcountries.com al hacer fetch directo desde el navegador.
   const loadCountryCoordinates = async () => {
     try {
-      const response = await fetch('https://restcountries.com/v3.1/all?fields=name,latlng,translations');
+      const response = await fetch('/api/restcountries?fields=name,latlng,translations');
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
       

@@ -22,10 +22,12 @@ export async function fetchCarMakes() {
 }
 
 // Obtiene nombres de paises en ingles y espanol para alimentar sugerencias del formulario.
+// Se usa la ruta proxy /api/restcountries en lugar de la URL directa para evitar errores
+// de CORS causados por el redirect 301 que devuelve restcountries.com en produccion.
 export async function fetchCountries() {
   try {
     const response = await fetch(
-      'https://restcountries.com/v3.1/all?fields=name,translations'
+      '/api/restcountries?fields=name,translations'
     );
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json();
