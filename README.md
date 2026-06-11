@@ -6,6 +6,7 @@ Proyecto web desarrollado para la asignatura **DTW135 - Desarrollo y tecnicas de
 
 Garaje de Coleccion es una aplicacion SPA construida con React. Su objetivo es ofrecer una interfaz practica para gestionar automoviles de coleccion mediante operaciones CRUD:
 
+- Registrar e iniciar sesion con cuenta de usuario.
 - Registrar nuevos automoviles.
 - Editar informacion existente.
 - Consultar detalles de cada vehiculo.
@@ -34,6 +35,30 @@ Archivos principales:
 - `src/App.jsx`
 - `src/components/`
 - `src/context/CarContext.jsx`
+
+### React Router DOM
+
+React Router DOM se utiliza para gestionar la navegacion entre paginas dentro de la SPA sin recargar el navegador.
+
+Uso dentro del proyecto:
+
+- Definicion de rutas en `src/routes/AppRoutes.jsx`.
+- Proteccion de rutas privadas mediante `ProtectedRoute`.
+- Navegacion programatica con `useNavigate`.
+- Enlace entre paginas con `Link`.
+
+Rutas definidas:
+
+| Ruta | Componente | Acceso |
+| --- | --- | --- |
+| `/` | `App` | Protegida (requiere sesion) |
+| `/login` | `Login` | Publica |
+| `/register` | `Register` | Publica |
+
+Archivos principales:
+
+- `src/routes/AppRoutes.jsx`
+- `src/routes/ProtectedRoute.jsx`
 
 ### Vite
 
@@ -143,17 +168,37 @@ El proyecto aprovecha varias APIs nativas del navegador.
 
 #### localStorage
 
-Se utiliza para guardar la coleccion de automoviles de forma persistente en el navegador.
+Se utiliza para guardar la coleccion de automoviles y la lista de usuarios registrados de forma persistente en el navegador.
+
+Archivos relacionados:
+
+- `src/services/storage.js`
+- `src/services/auth.js`
+
+Claves utilizadas:
+
+```txt
+garage_cars_v1   → coleccion de automoviles
+users            → lista de usuarios registrados
+```
+
+La lista de usuarios se guarda en `localStorage` en lugar de cookies porque las cookies tienen un limite aproximado de 4 KB, y superarlo causaria que el navegador descarte la cookie completa de forma silenciosa.
+
+#### Cookies
+
+Se utilizan cookies del navegador (`document.cookie`) para gestionar la sesion activa del usuario.
 
 Archivo relacionado:
 
-- `src/services/storage.js`
+- `src/services/auth.js`
 
-Clave utilizada:
+Nombre de la cookie:
 
 ```txt
-garage_cars_v1
+user   → objeto del usuario autenticado (codificado como JSON)
 ```
+
+La cookie tiene una duracion de 7 dias. `ProtectedRoute` verifica su existencia para decidir si el usuario puede acceder a la ruta principal.
 
 #### sessionStorage
 
@@ -222,6 +267,7 @@ Archivo principal:
 | --- | --- |
 | `react` | Construccion de componentes y manejo de UI |
 | `react-dom` | Renderizado de React en el DOM |
+| `react-router-dom` | Enrutamiento SPA, rutas protegidas y navegacion programatica |
 | `vite` | Servidor de desarrollo y build |
 | `@vitejs/plugin-react` | Integracion de React con Vite |
 | `bootstrap` | Estilos, grid, modales, botones, cards y layout |
@@ -252,8 +298,10 @@ DTW-Project-React/
 │   │   ├── CarTable.jsx
 │   │   ├── ConfirmDelete.jsx
 │   │   ├── Dashboard.jsx
+│   │   ├── Login.jsx
 │   │   ├── MapView.jsx
 │   │   ├── Navbar.jsx
+│   │   ├── Register.jsx
 │   │   └── Toast.jsx
 │   ├── context/
 │   │   └── CarContext.jsx
@@ -261,8 +309,12 @@ DTW-Project-React/
 │   │   ├── useGeolocation.js
 │   │   ├── useLocalStorage.js
 │   │   └── useTheme.js
+│   ├── routes/
+│   │   ├── AppRoutes.jsx
+│   │   └── ProtectedRoute.jsx
 │   ├── services/
 │   │   ├── api.js
+│   │   ├── auth.js
 │   │   ├── imageUtils.js
 │   │   └── storage.js
 │   ├── workers/
@@ -349,6 +401,42 @@ Modal de confirmacion antes de eliminar un automovil. Ayuda a evitar eliminacion
 
 Sistema de notificaciones temporales para mostrar mensajes de exito, advertencia, informacion o error.
 
+### `Login.jsx`
+
+Pagina de inicio de sesion. Incluye:
+
+- Formulario con campo de correo electronico y contrasena.
+- Validacion de credenciales contra la lista de usuarios guardada en `localStorage`.
+- Creacion de la cookie de sesion `user` al autenticarse correctamente.
+- Redireccion automatica a `/` tras el inicio de sesion.
+- Notificacion toast integrada para mostrar errores de autenticacion.
+- Enlace a la pagina de registro.
+
+### `Register.jsx`
+
+Pagina de registro de nuevos usuarios. Incluye:
+
+- Formulario con nombre, correo electronico y contrasena.
+- Validacion de correo duplicado (normalizado a minusculas).
+- Guardado del nuevo usuario en `localStorage`.
+- Redireccion automatica a `/login` tras el registro exitoso.
+- Notificacion toast integrada para confirmar el registro o mostrar errores.
+- Enlace al inicio de sesion.
+
+## Rutas y navegacion
+
+### `AppRoutes.jsx`
+
+Componente raiz del enrutamiento. Envuelve la aplicacion con `BrowserRouter` y define las rutas mediante `Routes` y `Route`:
+
+- `/` — ruta protegida que renderiza `App` solo si existe sesion activa.
+- `/login` — pagina publica de inicio de sesion.
+- `/register` — pagina publica de registro de cuenta.
+
+### `ProtectedRoute.jsx`
+
+Componente de guardia de ruta. Llama a `isAuthenticated()` del servicio `auth.js` para verificar si existe la cookie `user`. Si la sesion es valida renderiza los hijos; de lo contrario redirige a `/login`.
+
 ## Manejo de estado
 
 El estado global se gestiona con:
@@ -405,6 +493,18 @@ Centraliza la persistencia de datos en `localStorage`:
 - `saveCars(cars)`
 
 Tambien maneja errores de almacenamiento, incluyendo exceso de cuota.
+
+### `auth.js`
+
+Centraliza la logica de autenticacion y gestion de usuarios:
+
+- `setCookie(name, value, days)`: crea una cookie con el objeto del usuario autenticado, con expiracion de 7 dias.
+- `getCookie(name)`: lee y parsea una cookie del navegador. Devuelve `null` si no existe o contiene JSON invalido.
+- `deleteCookie(name)`: elimina una cookie estableciendo su fecha de vencimiento en el pasado.
+- `isAuthenticated()`: devuelve `true` si la cookie `user` existe.
+- `normalizeEmail(email)`: normaliza el correo a minusculas y sin espacios para comparaciones consistentes.
+- `getUsers()`: lee la lista de usuarios desde `localStorage`.
+- `saveUsers(users)`: guarda la lista de usuarios en `localStorage`.
 
 ### `imageUtils.js`
 
@@ -493,6 +593,15 @@ El usuario puede alternar entre tema claro y oscuro desde la barra de navegacion
 data-bs-theme
 ```
 
+### Autenticacion de usuarios
+
+La aplicacion cuenta con un sistema de autenticacion basado en el navegador:
+
+- Los usuarios se registran en `/register` y sus datos se guardan en `localStorage`.
+- El inicio de sesion en `/login` verifica las credenciales y crea una cookie de sesion `user` con duracion de 7 dias.
+- La ruta principal `/` esta protegida por `ProtectedRoute`, que valida la existencia de la cookie antes de renderizar la aplicacion.
+- Si no hay sesion activa, el usuario es redirigido automaticamente a `/login`.
+
 ### Notificaciones
 
 Las acciones importantes muestran notificaciones tipo toast:
@@ -569,11 +678,20 @@ npm run lint
 
 ## Persistencia de datos
 
-La aplicacion no utiliza una base de datos externa. Los datos se guardan en el navegador mediante `localStorage`, por lo que:
+La aplicacion no utiliza una base de datos externa. Los datos se guardan en el navegador:
+
+| Mecanismo | Contenido | Duracion |
+| --- | --- | --- |
+| `localStorage` (`garage_cars_v1`) | Coleccion de automoviles | Indefinida hasta borrado manual |
+| `localStorage` (`users`) | Lista de usuarios registrados | Indefinida hasta borrado manual |
+| Cookie (`user`) | Sesion del usuario autenticado | 7 dias |
+
+Consideraciones:
 
 - Los registros permanecen aunque se recargue la pagina.
 - Los datos pertenecen al navegador y dispositivo donde se ingresaron.
-- Si se limpia el almacenamiento del navegador, se eliminan los registros.
+- Si se limpia el almacenamiento del navegador, se eliminan los registros y los usuarios registrados.
+- Si vence la cookie o se elimina, el usuario debera iniciar sesion nuevamente.
 
 ## Validaciones
 
@@ -619,8 +737,7 @@ ESLint esta configurado en `eslint.config.js` con:
 
 ## Posibles mejoras futuras
 
-- Conectar una base de datos real.
-- Agregar autenticacion de usuarios.
+- Conectar una base de datos real y mover la autenticacion al servidor.
 - Exportar la coleccion a CSV o PDF.
 - Implementar filtros avanzados por estado, anio o rango de precio.
 - Crear un Web Worker real para metricas.
